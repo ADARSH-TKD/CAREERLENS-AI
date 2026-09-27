@@ -12,7 +12,7 @@ from utils.interview_engine import (
     generate_project_authenticity_question
 )
 from utils.speech import transcribe_audio, speak_text_html
-from utils.ui import inject_css, metric_card, score_ring, section_title
+from utils.ui import inject_css, metric_card, score_ring, section_title, get_company_logo_html
 from utils.nlp_features import (
     jd_match_score, generate_followup, generate_followup_detailed, fluency_report,
     semantic_keyword_match, ner_resume_dashboard, weakness_cluster_report
@@ -479,9 +479,24 @@ def interview_dashboard():
     cols = st.columns(4)
     for i, company in enumerate(companies):
         with cols[i % 4]:
-            st.markdown(f"<div class='company-card'><div class='company-icon'>{company[0]}</div><h3>{company}</h3><p>Technical • Core CS • Resume</p></div>", unsafe_allow_html=True)
-            if st.button(f"Practice {company}", key=f"company_{company}"):
+            logo_html = get_company_logo_html(company, height=36, max_width=120)
+            is_active = st.session_state.company == company
+            active_style = "border: 1.5px solid #a78bfa; box-shadow: 0 0 22px rgba(139,92,246,0.3);" if is_active else ""
+            st.markdown(
+                f"<div class='company-card' style='{active_style}'>"
+                f"{logo_html}"
+                f"<div>"
+                f"<h3 style='margin:6px 0 2px;font-size:1.05rem;'>{company}</h3>"
+                f"<p style='color:#81778e;font-size:.78rem;margin:0;'>Technical • Core CS • Resume</p>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            btn_lbl = f"✓ {company}" if is_active else f"Practice {company}"
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(btn_lbl, key=f"company_{company}", type=btn_type, use_container_width=True):
                 st.session_state.company = company
+                st.rerun()
 
     if st.session_state.company:
         st.markdown("<div class='glass'>", unsafe_allow_html=True)
@@ -490,7 +505,15 @@ def interview_dashboard():
             st.markdown("### 📄 Custom JD Interview")
             st.caption("Questions will be generated from your pasted job description.")
         else:
-            st.markdown(f"### {c_label} Practice")
+            logo_banner = get_company_logo_html(c_label, height=44, max_width=150)
+            st.markdown(
+                f"<div style='display:flex;align-items:center;gap:16px;margin-bottom:12px;'>"
+                f"{logo_banner}"
+                f"<div><h2 style='margin:0;font-size:1.6rem;'>{c_label} Technical Practice</h2>"
+                f"<span style='color:#a5b4fc;font-size:13px;'>Company-specific interview simulation & role assessment</span></div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
         voice_options = [
             "Professional Male (US)",
@@ -682,7 +705,14 @@ def interview_room():
         is_followup_round = False
 
     company_lbl = st.session_state.company or "Interview"
-    st.markdown(f"## {get_company_label(company_lbl)} Interview")
+    comp_logo = get_company_logo_html(company_lbl, height=32, max_width=110) if company_lbl != "Custom JD" else ""
+    st.markdown(
+        f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:6px;'>"
+        f"{comp_logo}"
+        f"<h2 style='margin:0;'>{get_company_label(company_lbl)} Interview</h2>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
 
     prog = (idx + (0.5 if is_followup_round else 0)) / total
     st.progress(min(prog, 1.0))
@@ -886,9 +916,19 @@ def report_page():
 
     st.components.v1.html(get_proctoring_exit_html(), height=0)
     st.markdown("## Interview Report")
+    comp_logo = get_company_logo_html(st.session_state.company, height=36, max_width=120) if st.session_state.company != "Custom JD" else ""
     st.markdown("<div class='report-hero'>", unsafe_allow_html=True)
     st.markdown(f"<div class='report-score'>{r['score']}<small>/100</small></div>", unsafe_allow_html=True)
-    st.markdown(f"<div><h2>{st.session_state.company} • {st.session_state.mode}</h2><p>{len(r['answers'])} questions attempted</p></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div>"
+        f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:6px;'>"
+        f"{comp_logo}"
+        f"<h2 style='margin:0;'>{st.session_state.company} • {st.session_state.mode}</h2>"
+        f"</div>"
+        f"<p style='margin:0;color:#94a3b8;'>{len(r['answers'])} questions attempted</p>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(3)
