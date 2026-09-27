@@ -50,12 +50,7 @@ def analyze_resume(text):
     try:
         nlp = spacy.load("en_core_web_sm")
     except Exception:
-        try:
-            import spacy.cli
-            spacy.cli.download("en_core_web_sm")
-            nlp = spacy.load("en_core_web_sm")
-        except Exception:
-            nlp = None
+        nlp = None
 
     try:
         sentences = nltk.sent_tokenize(text)
