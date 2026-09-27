@@ -229,7 +229,15 @@ def generate_project_authenticity_question(first_name: str, project) -> dict:
         tech_stack = []
 
     tech_hint = f" using {', '.join(tech_stack[:3])}" if tech_stack else ""
-    question = (
+    
+    llm_question = None
+    try:
+        from utils.llm_engine import generate_llm_project_probe
+        llm_question = generate_llm_project_probe(c_name, p_name, tech_hint)
+    except Exception:
+        pass
+
+    question = llm_question or (
         f"So {c_name}, on your resume you highlighted your project '{p_name}'{tech_hint}. "
         f"Could you walk me through the end-to-end system architecture, your specific technical contributions, "
         f"and the single toughest engineering roadblock or bug you encountered while building it?"
@@ -243,6 +251,7 @@ def generate_project_authenticity_question(first_name: str, project) -> dict:
         "question": question,
         "keywords": list(dict.fromkeys(base_kws + tech_kws)),
         "is_project_probe": True,
+        "is_llm": bool(llm_question),
         "project_name": p_name,
     }
 

@@ -14,7 +14,7 @@ from utils.interview_engine import (
 from utils.speech import transcribe_audio, speak_text_html
 from utils.ui import inject_css, metric_card, score_ring, section_title
 from utils.nlp_features import (
-    jd_match_score, generate_followup, fluency_report,
+    jd_match_score, generate_followup, generate_followup_detailed, fluency_report,
     semantic_keyword_match, ner_resume_dashboard, weakness_cluster_report
 )
 from utils.cs_core_bank import (
@@ -22,12 +22,13 @@ from utils.cs_core_bank import (
     get_cs_questions, get_random_cs_question, search_cs_bank
 )
 from utils.proctoring import get_proctoring_html, get_proctoring_exit_html
+from utils.llm_engine import is_llm_available, get_gemini_api_key, generate_llm_answer_feedback
 
 st.set_page_config(
     page_title="CareerLens AI",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 inject_css()
@@ -55,6 +56,8 @@ def init_state():
         "question_started_at": None,
         "jd_text": "",
         "jd_result": None,
+        # LLM state
+        "gemini_api_key": "",
         # Follow-up state machine
         "pending_followup": None,      # dict with question to ask as follow-up
         "answering_followup": False,    # True while user is answering a follow-up
@@ -75,6 +78,46 @@ def init_state():
             st.session_state[k] = v
 
 init_state()
+
+def render_sidebar():
+    with st.sidebar:
+        st.markdown("### 🤖 CareerLens LLM Engine")
+        has_key = is_llm_available()
+        if has_key:
+            st.success("🟢 **Gemini 2.5 Flash Active**\nAdaptive AI follow-ups & probes enabled.")
+        else:
+            st.info("⚡ **Local NLP Engine Active**\n100% free offline mode running.")
+
+        with st.expander("🔑 Gemini API Key (Optional)", expanded=not has_key):
+            st.markdown(
+                "<span style='font-size:12px;color:#94a3b8'>"
+                "Paste your Google Gemini API key to activate real-time LLM-generated follow-up questions and project probes.<br>"
+                "Free key available at <a href='https://aistudio.google.com/' target='_blank' style='color:#38bdf8'>Google AI Studio</a>."
+                "</span>",
+                unsafe_allow_html=True
+            )
+            key_input = st.text_input(
+                "Gemini API Key",
+                value=st.session_state.get("gemini_api_key", ""),
+                type="password",
+                help="Stored in your private session only and never saved to disk.",
+                placeholder="AIzaSy...",
+                label_visibility="collapsed"
+            )
+            if key_input != st.session_state.get("gemini_api_key", ""):
+                st.session_state.gemini_api_key = key_input.strip()
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown(
+            "<div style='font-size:11px;color:#64748b;line-height:1.5;'>"
+            "<strong>CareerLens AI v2.5</strong><br>"
+            "• Gemini 2.5 Flash LLM<br>"
+            "• SpaCy NER + Rule-based Fallback<br>"
+            "• Zero-cost offline resiliency"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
 def nav():
     st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
@@ -554,6 +597,14 @@ def _submit_answer(q, transcript):
     sem = semantic_keyword_match(transcript, q.get("keywords", []))
     result["semantic_score"] = sem["score_pct"]
     result["semantic_missed"] = sem["missed"]
+    # If Gemini LLM is active, generate coach feedback
+    try:
+        from utils.llm_engine import generate_llm_answer_feedback
+        ai_fb = generate_llm_answer_feedback(q["question"], transcript, q.get("category", "Technical"))
+        if ai_fb:
+            result["llm_feedback"] = ai_fb
+    except Exception:
+        pass
     return result
 
 def _advance(total):
@@ -639,11 +690,17 @@ def interview_room():
     top = st.columns([3, 1])
     with top[0]:
         if is_followup_round:
-            badge_html = "<span style='color:#f59e0b;margin-left:6px;font-size:11px'>🔁 FOLLOW-UP</span>"
+            if q.get("is_llm"):
+                badge_html = "<span style='color:#ec4899;margin-left:6px;font-size:11px'>🤖 AI FOLLOW-UP</span>"
+            else:
+                badge_html = "<span style='color:#f59e0b;margin-left:6px;font-size:11px'>🔁 ADAPTIVE FOLLOW-UP</span>"
         elif q.get("is_intro"):
             badge_html = "<span style='color:#22c55e;margin-left:6px;font-size:11px'>🌟 INTRO</span>"
         elif q.get("is_project_probe"):
-            badge_html = "<span style='color:#38bdf8;margin-left:6px;font-size:11px'>🔍 PROJECT PROBE</span>"
+            if q.get("is_llm"):
+                badge_html = "<span style='color:#ec4899;margin-left:6px;font-size:11px'>🤖 AI PROJECT PROBE</span>"
+            else:
+                badge_html = "<span style='color:#38bdf8;margin-left:6px;font-size:11px'>🔍 PROJECT PROBE</span>"
         elif q.get("is_resume"):
             badge_html = "<span style='color:#a855f7;margin-left:6px;font-size:11px'>📄 RESUME-AWARE</span>"
         else:
@@ -763,12 +820,13 @@ def interview_room():
                         name_str = st.session_state.name.strip() or "there"
                         c_first = name_str.split()[0].capitalize()
                         p_name = q.get("project_name", "")
-                        fq_text = generate_followup(transcript, q["question"], candidate_name=c_first, project_name=p_name)
+                        fq_text, is_llm = generate_followup_detailed(transcript, q["question"], candidate_name=c_first, project_name=p_name)
                         st.session_state.pending_followup = {
                             "category": q["category"],
                             "question": fq_text,
                             "keywords": q.get("keywords", []),
                             "is_followup": True,
+                            "is_llm": is_llm,
                         }
                         st.session_state.answering_followup = True
                         st.session_state.question_started_at = time.time()
@@ -890,6 +948,13 @@ def report_page():
         with st.expander(f"{i}. {a['question']}  —  {a['score']}/100"):
             st.write(a["feedback"])
             st.caption(f"Words: {a['word_count']} • Sentences: {a['sentence_count']} • Filler words: {a['fillers']}{sem_txt}")
+            if a.get("llm_feedback"):
+                st.markdown(f"""
+                <div style='margin-top:.5rem;padding:.6rem .9rem;background:rgba(236,72,153,.09);
+                     border-radius:8px;border:1px solid rgba(236,72,153,.3)'>
+                  <span style='font-size:11px;color:#f472b6;font-weight:700'>🤖 AI EVALUATOR COACH CRITIQUE</span><br>
+                  <span style='color:#fdf2f8;font-size:13px;'>{a['llm_feedback']}</span>
+                </div>""", unsafe_allow_html=True)
             # Fluency sub-report
             st.markdown(f"""
             <div style='margin-top:.5rem;padding:.6rem .9rem;background:rgba(99,102,241,.08);
@@ -1215,6 +1280,7 @@ def cs_core_page():
         _cs_knowledge_bank_view()
 
 def main():
+    render_sidebar()
     nav()
     page = st.session_state.page
     if page == "home":

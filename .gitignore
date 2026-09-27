@@ -11,6 +11,8 @@ env/
 
 # Streamlit secrets & cache
 .streamlit/secrets.toml
+.env
+*.env
 
 # OS generated files
 .DS_Store

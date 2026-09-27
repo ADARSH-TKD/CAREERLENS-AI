@@ -217,6 +217,11 @@ def build_pdf(filename="document.pdf"):
             Paragraph("Local tokenization, lemmatization, named-entity recognition, PDF binary stream extraction, and OCR image reading.", table_cell)
         ],
         [
+            Paragraph("Generative AI / LLM", table_cell_bold),
+            Paragraph("Google Gemini 2.5 Flash", table_cell),
+            Paragraph("Hybrid LLM integration (google-genai / REST API) for dynamic follow-up generation, project authenticity probing, and answer critique.", table_cell)
+        ],
+        [
             Paragraph("Proctoring Sandbox", table_cell_bold),
             Paragraph("Vanilla JS + Web Audio", table_cell),
             Paragraph("Browser full-screen event listener, shortcut key interception, synthesizer beeps, and security query parameter state machine.", table_cell)
@@ -240,12 +245,17 @@ def build_pdf(filename="document.pdf"):
     # SECTION 3: LIBRARIES & PURPOSE
     story.append(Paragraph("3. Detailed Library Breakdown & Purpose", h1_style))
     story.append(Paragraph(
-        "Each Python library in CareerLens AI was chosen specifically to eliminate external paid API dependencies while maximizing execution speed:",
+        "Each Python library in CareerLens AI was chosen specifically to balance cutting-edge generative AI capabilities with zero-cost offline resiliency:",
         body_style
     ))
 
     lib_data = [
         [Paragraph("Library", table_header), Paragraph("Specific Feature / Purpose", table_header), Paragraph("Implementation Location", table_header)],
+        [
+            Paragraph("<b>google-genai</b>", table_cell),
+            Paragraph("Google Gemini 2.5 Flash SDK for contextual follow-up question generation, project authenticity probing, and coach feedback.", table_cell),
+            Paragraph("<code>utils/llm_engine.py</code>", table_cell)
+        ],
         [
             Paragraph("<b>streamlit</b>", table_cell),
             Paragraph("Core application server, state management (session_state), user interface rendering, and live audio inputs.", table_cell),
@@ -324,7 +334,15 @@ def build_pdf(filename="document.pdf"):
     story.append(Paragraph("• <b>Dual Formulation Modes:</b> Alternates between: (a) <i>Related Concept Pivot</i> (e.g., <i>'So Adarsh, as you mentioned Artificial Intelligence, do you know about deep learning and neural networks?'</i>) and (b) <i>Under-the-Hood Probe</i> (e.g., <i>'As you mentioned Artificial Intelligence, can you explain what it is and how algorithms learn patterns from data?'</i>).", bullet_style))
     story.append(Paragraph("• <b>Dynamic spaCy Noun-Chunk Fallback:</b> If the concept is outside the static knowledge base, spaCy extracts the root noun phrase from the candidate's response to construct an organic follow-up.", bullet_style))
 
-    story.append(Paragraph("4.3 Mathematical Resume ↔ Job Description Matching", h2_style))
+    story.append(Paragraph("4.3 Hybrid Generative AI & Resilient Local Fallback Engine", h2_style))
+    story.append(Paragraph(
+        "CareerLens AI integrates a dual-tier question generation and answer evaluation engine:",
+        body_style
+    ))
+    story.append(Paragraph("• <b>Primary Tier (Google Gemini 2.5 Flash):</b> When a Gemini API key is configured (via Streamlit Secrets or sidebar), the platform prompts the LLM with strict system instructions to generate single-sentence, highly contextual follow-ups, project authenticity probes, and 2-sentence coach critiques.", bullet_style))
+    story.append(Paragraph("• <b>Resilient Secondary Fallback:</b> If no API key is supplied, network connectivity drops, or quota is reached, the system automatically falls back to its internal technical ontology and spaCy NLP pipeline with zero runtime errors or interruption.", bullet_style))
+
+    story.append(Paragraph("4.4 Mathematical Resume ↔ Job Description Matching", h2_style))
     story.append(Paragraph(
         "The system calculates text similarity using TF-IDF (Term Frequency-Inverse Document Frequency) and cosine distance:",
         body_style
@@ -339,7 +357,7 @@ def build_pdf(filename="document.pdf"):
         body_style
     ))
 
-    story.append(Paragraph("4.4 Full-Screen Anti-Cheating & Keyboard Sandboxing", h2_style))
+    story.append(Paragraph("4.5 Full-Screen Anti-Cheating & Keyboard Sandboxing", h2_style))
     story.append(Paragraph(
         "A client-side security harness enforces strict proctoring during the interview:",
         body_style
@@ -431,6 +449,12 @@ def build_pdf(filename="document.pdf"):
             "name": "Voice Transcription & Interview Report",
             "steps": "1. Record answer via browser microphone.<br/>2. Verify transcription matches spoken words.<br/>3. Complete all questions in the interview.",
             "expected": "System generates comprehensive Diagnostic Report with overall score, vocabulary richness, filler word analysis, and strengths/weaknesses."
+        },
+        {
+            "id": "TC-10",
+            "name": "Google Gemini LLM Follow-Up & Local Fallback Testing",
+            "steps": "1. In Sidebar, enter a Gemini API Key (or leave blank for offline test).<br/>2. Answer a question mentioning a technical tool or framework.<br/>3. Observe follow-up question format and UI badge.",
+            "expected": "If API key is valid, badge displays pink '[AI FOLLOW-UP]' with highly contextual probing. If key is missing or offline, badge displays yellow '[ADAPTIVE FOLLOW-UP]' via local NLP fallback with zero crashes."
         },
     ]
 

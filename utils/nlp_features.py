@@ -214,16 +214,34 @@ _CONCEPT_KNOWLEDGE = [
 
 
 def generate_followup(answer_text: str, current_question: str = "", candidate_name: str = "there", project_name: str = "") -> str:
+    """Convenience wrapper returning question text."""
+    fq, _ = generate_followup_detailed(answer_text, current_question, candidate_name, project_name)
+    return fq
+
+
+def generate_followup_detailed(answer_text: str, current_question: str = "", candidate_name: str = "there", project_name: str = "") -> tuple:
     """
-    Generate an intelligent, highly personalized follow-up question that:
-    1. Addresses candidate directly by first name.
-    2. Explicitly references the technical concept just mentioned in their answer.
-    3. Seamlessly links to related deep technical concepts or probes for under-the-hood understanding.
+    Generate an intelligent, highly personalized follow-up question.
+    1. Tries Google Gemini LLM (gemini-2.5-flash) first if API key is provided.
+    2. Falls back to local NLP ontology & regex pattern matching if offline or unconfigured.
     
-    Examples:
-      - 'So Adarsh, as you mentioned Artificial Intelligence, do you know about deep learning and neural networks?'
-      - 'As you mentioned Artificial Intelligence, can you explain what it is in detail and how algorithms learn from data?'
+    Returns:
+        (question_text: str, is_llm: bool)
     """
+    # 0. Try LLM Generation first
+    try:
+        from utils.llm_engine import generate_llm_followup
+        llm_q = generate_llm_followup(
+            candidate_name=candidate_name,
+            current_question=current_question,
+            candidate_answer=answer_text,
+            project_name=project_name
+        )
+        if llm_q:
+            return llm_q, True
+    except Exception:
+        pass
+
     import random
     raw_name = candidate_name.strip() if candidate_name else ""
     first_name = raw_name.split()[0].capitalize() if raw_name and raw_name.lower() != "there" else ""
@@ -248,11 +266,11 @@ def generate_followup(answer_text: str, current_question: str = "", candidate_na
         display = f"your project '{project_name}'"
         style = random.choice([1, 2, 3])
         if style == 1:
-            return f"{prefix}as you mentioned {display}, do you know how you would scale its database and architecture if concurrent users grew tenfold?"
+            return (f"{prefix}as you mentioned {display}, do you know how you would scale its database and architecture if concurrent users grew tenfold?", False)
         elif style == 2:
-            return f"As you mentioned {display}, can you explain what technical trade-offs you made when selecting the stack and designing the APIs?"
+            return (f"As you mentioned {display}, can you explain what technical trade-offs you made when selecting the stack and designing the APIs?", False)
         else:
-            return f"{prefix}regarding {display}, how did you test edge cases and what was the hardest bug you personally fixed?"
+            return (f"{prefix}regarding {display}, how did you test edge cases and what was the hardest bug you personally fixed?", False)
 
     if matched_concept:
         disp = matched_concept["display"]
@@ -263,12 +281,12 @@ def generate_followup(answer_text: str, current_question: str = "", candidate_na
         style = random.choice([1, 2, 3])
         if style == 1:
             # "So Adarsh, as you mentioned Artificial Intelligence, do you know about deep learning..."
-            return f"{prefix}as you mentioned {disp}, do you know about {rel} and how it relates to what you described?"
+            return (f"{prefix}as you mentioned {disp}, do you know about {rel} and how it relates to what you described?", False)
         elif style == 2:
             # "As you mentioned Artificial Intelligence, can you explain what it is..."
-            return f"As you mentioned {disp}, {expl}?"
+            return (f"As you mentioned {disp}, {expl}?", False)
         else:
-            return f"{prefix}as you mentioned {disp}, {trade}?"
+            return (f"{prefix}as you mentioned {disp}, {trade}?", False)
 
     # 2. Dynamic NLP Extraction if not in static knowledge base
     extracted_phrase = None
@@ -293,13 +311,13 @@ def generate_followup(answer_text: str, current_question: str = "", candidate_na
             extracted_phrase = valid[0]
 
     if extracted_phrase:
-        return f"{prefix}as you mentioned '{extracted_phrase}', can you explain what it is in detail and walk me through a practical example of how you applied it?"
+        return (f"{prefix}as you mentioned '{extracted_phrase}', can you explain what it is in detail and walk me through a practical example of how you applied it?", False)
 
     # Fallback for very brief answers
     if len(text.split()) < 15:
-        return f"{prefix}that was a concise summary — could you elaborate with a concrete technical example or code-level implementation detail?"
+        return (f"{prefix}that was a concise summary — could you elaborate with a concrete technical example or code-level implementation detail?", False)
 
-    return f"{prefix}how would this approach change if you had to optimize for high throughput, low latency, and zero downtime in production?"
+    return (f"{prefix}how would this approach change if you had to optimize for high throughput, low latency, and zero downtime in production?", False)
 
 
 
