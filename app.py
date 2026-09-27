@@ -12,7 +12,7 @@ from utils.interview_engine import (
     generate_project_authenticity_question
 )
 from utils.speech import transcribe_audio, speak_text_html
-from utils.ui import inject_css, metric_card, score_ring, section_title, get_company_logo_html
+from utils.ui import inject_css, metric_card, score_ring, section_title, get_company_logo_html, inject_interview_room_bg
 from utils.nlp_features import (
     jd_match_score, generate_followup, generate_followup_detailed, fluency_report,
     semantic_keyword_match, ner_resume_dashboard, weakness_cluster_report
@@ -1323,6 +1323,8 @@ def main():
     render_sidebar()
     nav()
     page = st.session_state.page
+    if page in ("interview", "interview_room"):
+        inject_interview_room_bg()
     if page == "home":
         home()
     elif page == "analysis":

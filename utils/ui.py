@@ -108,3 +108,66 @@ def score_ring(score):
 
 def section_title(title):
     st.markdown(f"<h3 style='margin-top:0'>{title}</h3>", unsafe_allow_html=True)
+
+@functools.lru_cache(maxsize=1)
+def get_interview_background_b64() -> str:
+    # Try optimized WebP first for instant loading
+    webp_path = Path("background.webp")
+    if webp_path.exists():
+        try:
+            data = webp_path.read_bytes()
+            encoded = base64.b64encode(data).decode("utf-8")
+            return f"data:image/webp;base64,{encoded}"
+        except Exception:
+            pass
+
+    # Fallback to background.png
+    png_path = Path("background.png")
+    if png_path.exists():
+        try:
+            data = png_path.read_bytes()
+            encoded = base64.b64encode(data).decode("utf-8")
+            return f"data:image/png;base64,{encoded}"
+        except Exception:
+            pass
+    return ""
+
+def inject_interview_room_bg():
+    b64 = get_interview_background_b64()
+    if b64:
+        st.markdown(f"""
+        <style>
+        .stApp {{
+            background-image: linear-gradient(rgba(7, 5, 13, 0.40), rgba(7, 5, 13, 0.60)), url('{b64}') !important;
+            background-size: cover !important;
+            background-position: center top !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
+        }}
+        .question-card {{
+            background: linear-gradient(145deg, rgba(27, 16, 40, 0.82), rgba(12, 8, 17, 0.88)) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1.5px solid rgba(192, 132, 252, 0.35) !important;
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5) !important;
+        }}
+        .mic-card {{
+            background: radial-gradient(circle, rgba(40, 18, 63, 0.82), rgba(12, 8, 17, 0.88) 65%) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1.5px solid rgba(139, 92, 246, 0.35) !important;
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5) !important;
+        }}
+        .glass {{
+            background: linear-gradient(145deg, rgba(24, 16, 37, 0.82), rgba(11, 8, 17, 0.88)) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(167, 139, 250, 0.25) !important;
+        }}
+        .company-card {{
+            background: linear-gradient(145deg, rgba(23, 16, 34, 0.82), rgba(12, 9, 18, 0.88)) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
