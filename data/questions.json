@@ -1,0 +1,11 @@
+{
+  "note": "The prototype currently keeps the curated question bank in utils/interview_engine.py for simplicity. This JSON is included as an extension point.",
+  "companies": [
+    "Microsoft",
+    "Google",
+    "Amazon",
+    "TCS",
+    "Infosys",
+    "Accenture"
+  ]
+}
